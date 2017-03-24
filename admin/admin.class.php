@@ -41,6 +41,15 @@ class TK_Post_Syndication_Admin {
 	private $version;
 
 	/**
+	 * The comment parent as passed from the preprocess_comment hook
+	 *
+	 * @since    1.0.0
+	 * @access   private
+	 * @var 		 int			 $comment_parent		The parent comment ID
+	 */
+	private $comment_parent;
+
+	/**
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    1.0.0
@@ -214,6 +223,11 @@ class TK_Post_Syndication_Admin {
 				restore_current_blog();
 			}
 		}
+	}
+
+	public function preprocess_comment( $commentdata ) {
+		$this->comment_parent = absint($commentdata['comment_parent']);
+		return $commentdata;
 	}
 
 }
