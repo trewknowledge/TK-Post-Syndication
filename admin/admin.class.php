@@ -149,10 +149,6 @@ class TK_Post_Syndication_Admin {
 					'post_status' => $post->post_status,
 					'post_type' => $post->post_type,
 					'post_name' => $post->post_name,
-					'post_date' => $post->post_date,
-					'post_date_gmt' => $post->post_date_gmt,
-					'post_modified' => $post->post_modified,
-					'post_modified_gmt' => $post->post_modified_gmt,
 					'comment_status' => $post->comment_status,
 					'ping_status' => $post->ping_status,
 				);
