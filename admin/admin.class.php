@@ -217,6 +217,7 @@ class TK_Post_Syndication_Admin {
 
 			if ( $parent_blog_id && $parent_post_id ) {
 				$commentdata[ 'comment_post_ID' ] = $parent_post_id;
+				$commentdata[ 'comment_parent' ] = $this->comment_parent;
 
 				switch_to_blog( $parent_blog_id );
 					wp_insert_comment( $commentdata );
