@@ -74,7 +74,6 @@ class TK_Post_Syndication {
 		$this->load_dependencies();
 		$this->set_locale();
 		$this->define_admin_hooks();
-		$this->define_public_hooks();
 
 	}
 
@@ -113,12 +112,6 @@ class TK_Post_Syndication {
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/admin.class.php';
 
-		/**
-		 * The class responsible for defining all actions that occur in the public-facing
-		 * side of the site.
-		 */
-		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/public.class.php';
-
 		$this->loader = new TK_Post_Syndication_Loader();
 
 	}
@@ -151,29 +144,11 @@ class TK_Post_Syndication {
 
 		$plugin_admin = new TK_Post_Syndication_Admin( $this->get_tk_post_syndication(), $this->get_version() );
 
-		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
-		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 		$this->loader->add_action( 'add_meta_boxes', $plugin_admin, 'add_sync_meta_box' );
 		$this->loader->add_action( 'save_post', $plugin_admin, 'save_post', 10, 2 );
 		$this->loader->add_action( 'load-post.php', $plugin_admin, 'block_synced_post_edit' );
 		$this->loader->add_action( 'comment_post', $plugin_admin, 'sync_comments', 10, 3 );
 		$this->loader->add_action( 'preprocess_comment', $plugin_admin, 'preprocess_comment', 10 );
-	}
-
-	/**
-	 * Register all of the hooks related to the public-facing functionality
-	 * of the plugin.
-	 *
-	 * @since    1.0.0
-	 * @access   private
-	 */
-	private function define_public_hooks() {
-
-		$plugin_public = new TK_Post_Syndication_Public( $this->get_tk_post_syndication(), $this->get_version() );
-
-		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
-		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
-
 	}
 
 	/**
