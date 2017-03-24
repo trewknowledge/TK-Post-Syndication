@@ -176,6 +176,7 @@ class TK_Post_Syndication_Admin {
 			if ( has_post_thumbnail( $post_id ) ) {
 				$feat_image = get_the_post_thumbnail_url( $post_id, 'full' );
 			}
+			$parent_post_format = get_post_format( $post_id );
 			foreach ( $_POST['sites_to_sync'] as $site ) {
 				switch_to_blog( $site );
 				$postarr = array(
@@ -200,6 +201,7 @@ class TK_Post_Syndication_Admin {
 				} else {
 					delete_post_thumbnail( $target_post_id );
 				}
+				set_post_format( $target_post_id , $parent_post_format);
 				update_post_meta( $target_post_id, 'parent_post_id', array( $parent_blog_id => $post->ID ) );
 				restore_current_blog();
 			}
