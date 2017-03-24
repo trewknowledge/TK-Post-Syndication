@@ -180,7 +180,6 @@ class TK_Post_Syndication_Admin {
 					'ID' => $posts_to_update[ $site ] ? $posts_to_update[ $site ] : 0,
 					'post_content' => $post->post_content,
 					'post_title' => $post->post_title,
-					'post_excerpt' => $post->post_excerpt,
 					'post_status' => $post->post_status,
 					'post_type' => $post->post_type,
 					'post_name' => $post->post_name,
