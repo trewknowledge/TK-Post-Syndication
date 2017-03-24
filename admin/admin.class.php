@@ -173,12 +173,34 @@ class TK_Post_Syndication_Admin {
 			$posts_to_update = get_post_meta( $post_id, 'posts_to_update', true );
 			$posts_arr = array();
 			$parent_blog_id = get_current_blog_id();
+
 			if ( has_post_thumbnail( $post_id ) ) {
 				$feat_image = get_the_post_thumbnail_url( $post_id, 'full' );
 			}
+
 			$parent_post_format = get_post_format( $post_id );
+			$parent_category_terms = wp_get_post_categories( $post_id, array( 'fields' => 'all' ) );
+			$parent_post_tags = wp_get_post_tags( $post_id, array( 'fields' => 'names' ) );
+
 			foreach ( $_POST['sites_to_sync'] as $site ) {
 				switch_to_blog( $site );
+
+				$categoriesArr = array();
+				if ( $parent_category_terms ) {
+					foreach ( $parent_category_terms as $term ) {
+						// Adds or Updates the category on the child site
+						wp_insert_term(
+			        $term->name,
+			        'category',
+			        array(
+			          'description' => $term->description,
+			          'slug'    => $term->slug
+		          )
+		        );
+						$categoriesArr[] = $term->name;
+			    }
+				}
+
 				$postarr = array(
 					'ID' => $posts_to_update[ $site ] ? $posts_to_update[ $site ] : 0,
 					'post_content' => $post->post_content,
@@ -189,9 +211,14 @@ class TK_Post_Syndication_Admin {
 					'post_name' => $post->post_name,
 					'comment_status' => $post->comment_status,
 					'ping_status' => $post->ping_status,
+					'tax_input' => array(
+						'post_tag' => $parent_post_tags,
+					),
 				);
+
+				// Fix so wp_insert_post does not run an infinite amount of times
 				remove_action( 'save_post', array( $this, 'save_post' ) );
-					$target_post_id = wp_insert_post( $postarr );
+				$target_post_id = wp_insert_post( $postarr );
 				add_action( 'save_post', array( $this, 'save_post' ) );
 
 				$posts_arr[ $site ] = $target_post_id;
@@ -201,7 +228,16 @@ class TK_Post_Syndication_Admin {
 				} else {
 					delete_post_thumbnail( $target_post_id );
 				}
+
+				// Clear all categories
+				wp_set_object_terms( $target_post_id, null, 'category' );
+				foreach ( $categoriesArr as $cat ) {
+					// Set the categories
+					wp_set_object_terms( $target_post_id, $cat, 'category', true );
+				}
+				// Sets the post format
 				set_post_format( $target_post_id , $parent_post_format);
+
 				update_post_meta( $target_post_id, 'parent_post_id', array( $parent_blog_id => $post->ID ) );
 				restore_current_blog();
 			}
