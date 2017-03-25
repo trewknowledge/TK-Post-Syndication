@@ -116,7 +116,7 @@ class TK_Post_Syndication_Admin {
 	public function sync_meta_box_callback($post, $metabox){
 		foreach ( $metabox['args']['sites'] as $site ) {
 			if ( absint( $site->blog_id ) !== get_current_blog_id() ) {
-				if ( is_user_member_of_blog( get_current_user_id(), $site->blog_id ) && current_user_can_for_blog( $site->blog_id, 'author' ) ) {
+				if ( is_user_member_of_blog( get_current_user_id(), $site->blog_id ) && current_user_can_for_blog( $site->blog_id, 'author' ) || current_user_can_for_blog( $site->blog_id, 'editor' ) || current_user_can_for_blog( $site->blog_id, 'administrator' ) ) {
 					$site_details = get_blog_details( $site->blog_id );
 					$existing_meta = get_post_meta( $post->ID, 'sync_with', true );
 					?>
