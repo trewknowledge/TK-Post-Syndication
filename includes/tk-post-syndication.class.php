@@ -149,6 +149,7 @@ class TK_Post_Syndication {
 		$this->loader->add_action( 'load-post.php', $plugin_admin, 'block_synced_post_edit' );
 		$this->loader->add_action( 'comment_post', $plugin_admin, 'sync_comments', 10, 3 );
 		$this->loader->add_action( 'preprocess_comment', $plugin_admin, 'preprocess_comment', 10 );
+		$this->loader->add_action( 'get_comments_number', $plugin_admin, 'get_comments_number', 10, 2 );
 	}
 
 	/**

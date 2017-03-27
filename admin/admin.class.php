@@ -230,4 +230,19 @@ class TK_Post_Syndication_Admin {
 		return $commentdata;
 	}
 
+	public function get_comments_number( $count, $post_id ) {
+		if ( $master_post = $this->get_master_post( $post_id ) ) {
+			$parent_blog_id = $master_post[ 'blog_id' ];
+			$parent_post_id = $master_post[ 'post_id' ];
+
+			if ( $parent_blog_id && $parent_post_id ) {
+				switch_to_blog( $parent_blog_id );
+				$count = wp_count_comments( $parent_post_id );
+				restore_current_blog();
+			}
+			return $count->total_comments;
+		}
+		return $count;
+	}
+
 }
