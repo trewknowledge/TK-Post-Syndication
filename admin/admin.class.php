@@ -174,7 +174,7 @@ class TK_Post_Syndication_Admin {
 		}
 	}
 
-	public function get_master_post( $post_id = null ) {
+	public static function get_master_post( $post_id = null ) {
 		if ( ! $post_id ) {
 			$post_id = get_the_ID();
 		}
@@ -192,7 +192,7 @@ class TK_Post_Syndication_Admin {
 	}
 
 	public function block_synced_post_edit() {
-		$master_post = $this->get_master_post( $_GET[ 'post' ] );
+		$master_post = self::get_master_post( $_GET[ 'post' ] );
 		if ( $master_post ) {
 			$parent_blog_id = $master_post[ 'blog_id' ];
 			$parent_post_id = $master_post[ 'post_id' ];
@@ -209,7 +209,7 @@ class TK_Post_Syndication_Admin {
 	}
 
 	public function sync_comments( $comment_ID, $approved, $commentdata ) {
-		$master_post = $this->get_master_post( $commentdata[ 'comment_post_ID' ] );
+		$master_post = self::get_master_post( $commentdata[ 'comment_post_ID' ] );
 		if ( $master_post ) {
 			$parent_blog_id = $master_post[ 'blog_id' ];
 			$parent_post_id = $master_post[ 'post_id' ];
@@ -231,7 +231,7 @@ class TK_Post_Syndication_Admin {
 	}
 
 	public function get_comments_number( $count, $post_id ) {
-		if ( $master_post = $this->get_master_post( $post_id ) ) {
+		if ( $master_post = self::get_master_post( $post_id ) ) {
 			$parent_blog_id = $master_post[ 'blog_id' ];
 			$parent_post_id = $master_post[ 'post_id' ];
 
