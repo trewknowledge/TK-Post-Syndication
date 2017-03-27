@@ -63,52 +63,6 @@ class TK_Post_Syndication_Admin {
 
 	}
 
-	/**
-	 * Register the stylesheets for the admin area.
-	 *
-	 * @since    1.0.0
-	 */
-	public function enqueue_styles() {
-
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in TK_Post_Syndication_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The TK_Post_Syndication_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
-
-		wp_enqueue_style( $this->tk_post_syndication, plugin_dir_url( __FILE__ ) . 'css/admin.css', array(), $this->version, 'all' );
-
-	}
-
-	/**
-	 * Register the JavaScript for the admin area.
-	 *
-	 * @since    1.0.0
-	 */
-	public function enqueue_scripts() {
-
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in TK_Post_Syndication_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The TK_Post_Syndication_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
-
-		wp_enqueue_script( $this->tk_post_syndication, plugin_dir_url( __FILE__ ) . 'js/admin.js', array( 'jquery' ), $this->version, false );
-
-	}
-
 	public function add_sync_meta_box() {
 		add_meta_box( 'sync-meta-box', __('Should this post be synced between sites on this network?', 'tk-post-syndication'), array($this, 'sync_meta_box_callback'), 'post', 'side', 'high', array( 'sites' => get_sites() ) );
 	}
