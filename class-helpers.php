@@ -105,9 +105,6 @@ class TK_Post_Syndication_Helper {
 			$this->dir   = trailingslashit( $plugins_dir ) . $this->folder . '/';
 			$this->url   = trailingslashit( $plugins_url ) . $this->folder . '/';
 
-		} else {
-			// WTF? Something inexplicable happened.
-			error_log( 'PLUGIN/THEME ERROR: Cannot find ' . $plugins_dir . ' or "themes" in ' . $file );
 		}
 
 		// Suffix for enqueuing scripts and styles, makes for easier debugging.
@@ -328,19 +325,16 @@ class TK_Post_Syndication_Helper {
 		if ( file_exists( get_stylesheet_directory() . "/$sub_dir" . $template_file ) ) {
 			return get_stylesheet_directory() . "/$sub_dir" . $template_file;
 		} // If there's a tpl in the parent of the current child theme.
-		else if ( file_exists( get_template_directory() . "/$sub_dir" . $template_file ) ) {
+		elseif ( file_exists( get_template_directory() . "/$sub_dir" . $template_file ) ) {
 			return get_template_directory() . "/$sub_dir" . $template_file;
 		} // Fall back on the bundled plugin template (N.B. no filtered subfolder involved).
-		else if ( file_exists( $this->dir( "templates/$template_file" ) ) ) {
+		elseif ( file_exists( $this->dir( "templates/$template_file" ) ) ) {
 			return $this->dir( "templates/$template_file" );
 		}
 
 		// Oh dear. We can't find the template.
 		$msg = sprintf( __( 'This plugin template could not be found, perhaps you need to hook `sil_plugins_dir` and `sil_plugins_url`: %s' ),
 		$this->dir( "templates/$template_file" ) );
-
-		// Log it, so that we can see what went wrong.
-		error_log( "Template error: $msg" );
 
 		// Echo the message to the user.
 		echo sprintf(
@@ -540,13 +534,4 @@ class TK_Post_Syndication_Helper {
 		return $excerpt;
 	}
 
-	protected function write_log( $log ) {
-		if ( true === WP_DEBUG ) {
-			if ( is_array( $log ) || is_object( $log ) ) {
-				error_log( print_r( $log, true ) );
-			} else {
-				error_log( $log );
-			}
-		}
-	}
 }
