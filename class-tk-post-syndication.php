@@ -1,44 +1,20 @@
 <?php
-
 /**
- * The admin-specific functionality of the plugin.
+ * File contains the main TK Post Syndication class
  *
- * @link       http://trewknowledge.com
- * @since      1.0.0
- *
- * @package    TK_Post_Syndication
- * @subpackage TK_Post_Syndication/admin
+ * @package TK_Post_Syndication
  */
 
-/**
- * The admin-specific functionality of the plugin.
- *
- * Defines the plugin name, version, and two examples hooks for how to
- * enqueue the admin-specific stylesheet and JavaScript.
- *
- * @package    TK_Post_Syndication
- * @subpackage TK_Post_Syndication/admin
- * @author     Fernando Claussen <fernandoclaussen@gmail.com>
- */
-class TK_Post_Syndication_Admin {
+require_once( 'class-helpers.php' );
+
+class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 
 	/**
-	 * The ID of this plugin.
+	 * A version number for cache busting, etc.
 	 *
-	 * @since    1.0.0
-	 * @access   private
-	 * @var      string    $tk_post_syndication    The ID of this plugin.
+	 * @var int A version tag for cache-busting
 	 */
-	private $tk_post_syndication;
-
-	/**
-	 * The version of this plugin.
-	 *
-	 * @since    1.0.0
-	 * @access   private
-	 * @var      string    $version    The current version of this plugin.
-	 */
-	private $version;
+	public $version;
 
 	/**
 	 * The comment parent as passed from the preprocess_comment hook
@@ -49,33 +25,34 @@ class TK_Post_Syndication_Admin {
 	 */
 	private $comment_parent;
 
-	/**
-	 * Initialize the class and set its properties.
-	 *
-	 * @since    1.0.0
-	 * @param      string    $tk_post_syndication       The name of this plugin.
-	 * @param      string    $version    The version of this plugin.
-	 */
-	public function __construct( $tk_post_syndication, $version ) {
+	public function __construct( ) {
+		$this->setup( 'tk-post-syndication' );
+		$this->version = '0.1.0';
 
-		$this->tk_post_syndication = $tk_post_syndication;
-		$this->version = $version;
-
+		if ( is_admin() ) {
+			add_action( 'add_meta_boxes', array( $this, 'add_sync_meta_box' ) );
+			add_action( 'save_post', array( $this,'save_post' ), 10, 2 );
+			add_action( 'load-post.php', array( $this, 'block_synced_post_edit' ) );
+		} else {
+			add_action( 'comment_post', array( $this, 'sync_comments' ), 10, 3 );
+			add_action( 'preprocess_comment', array( $this, 'preprocess_comment' ) );
+			add_action( 'get_comments_number', array( $this, 'get_comments_number' ), 10, 2 );
+		}
 	}
 
 	public function add_sync_meta_box() {
-		add_meta_box( 'sync-meta-box', __('Should this post be synced between sites on this network?', 'tk-post-syndication'), array($this, 'sync_meta_box_callback'), 'post', 'side', 'high', array( 'sites' => get_sites() ) );
+		$this->add_meta_box( 'sync-meta-box', __('Should this post be synced between sites on this network?', 'tk-post-syndication'), 'sync_meta_box_callback', 'post', 'side', 'high', array( 'sites' => get_sites() ) );
 	}
 
 	public function sync_meta_box_callback($post, $metabox){
-		foreach ( $metabox['args']['sites'] as $site ) {
-			if ( absint( $site->blog_id ) !== get_current_blog_id() ) {
-				if ( is_user_member_of_blog( get_current_user_id(), $site->blog_id ) && current_user_can_for_blog( $site->blog_id, 'author' ) || current_user_can_for_blog( $site->blog_id, 'editor' ) || current_user_can_for_blog( $site->blog_id, 'administrator' ) ) {
-					$site_details = get_blog_details( $site->blog_id );
-					$existing_meta = get_post_meta( $post->ID, 'sync_with', true );
+		foreach ( $metabox['args']['sites'] as $blog ) {
+			if ( absint( $blog->blog_id ) !== get_current_blog_id() ) {
+				if ( is_user_member_of_blog( get_current_user_id(), $blog->blog_id ) && current_user_can_for_blog( $blog->blog_id, 'author' ) || current_user_can_for_blog( $blog->blog_id, 'editor' ) || current_user_can_for_blog( $blog->blog_id, 'administrator' ) ) {
+					$site_details = get_blog_details( $blog->blog_id );
+					$existing_meta = get_post_meta( $post->ID, 'tkps_sync_with', true );
 					?>
 					<label>
-						<input type="checkbox" <?php if( in_array( $site->blog_id, $existing_meta ) ) { echo 'checked="checked"'; } ?> name="sites_to_sync[]" value="<?php echo $site->blog_id; ?>" /> <?php echo $site_details->blogname; ?>
+						<input type="checkbox" <?php if( is_array( $existing_meta ) && in_array( $blog->blog_id, $existing_meta ) ) { echo 'checked="checked"'; } ?> name="tkps_sites_to_sync[]" value="<?php echo $blog->blog_id; ?>" /> <?php echo $site_details->blogname; ?>
 					</label>
 					<br>
 					<?php
@@ -98,8 +75,8 @@ class TK_Post_Syndication_Admin {
 		if ( false !== wp_is_post_revision( $post_id ) )
       return;
 
-		if ( isset( $_POST['sites_to_sync'] ) && $_POST['sites_to_sync'] ) {
-			$posts_to_update = get_post_meta( $post_id, 'posts_to_update', true );
+		if ( isset( $_POST['tkps_sites_to_sync'] ) && $_POST['tkps_sites_to_sync'] ) {
+			$posts_to_update = get_post_meta( $post_id, 'tkps_posts_to_update', true );
 			$posts_arr = array();
 			$parent_blog_id = get_current_blog_id();
 
@@ -111,12 +88,13 @@ class TK_Post_Syndication_Admin {
 			$parent_category_terms = wp_get_post_categories( $post_id, array( 'fields' => 'all' ) );
 			$parent_post_tags = wp_get_post_tags( $post_id, array( 'fields' => 'names' ) );
 
-			foreach ( $_POST['sites_to_sync'] as $site ) {
+			foreach ( $_POST['tkps_sites_to_sync'] as $site ) {
 				switch_to_blog( $site );
 
 				$categoriesArr = array();
 				if ( $parent_category_terms ) {
 					foreach ( $parent_category_terms as $term ) {
+
 						// Adds or Updates the category on the child site
 						wp_insert_term(
 			        $term->name,
@@ -126,7 +104,9 @@ class TK_Post_Syndication_Admin {
 			          'slug'    => $term->slug
 		          )
 		        );
+
 						$categoriesArr[] = $term->name;
+
 			    }
 				}
 
@@ -152,7 +132,7 @@ class TK_Post_Syndication_Admin {
 				$posts_arr[ $site ] = $target_post_id;
 
 				if ( isset( $feat_image ) && $feat_image ) {
-					update_post_meta( $target_post_id, 'parent_featured_image_url', $feat_image );
+					update_post_meta( $target_post_id, 'tkps_parent_featured_image_url', $feat_image );
 				} else {
 					delete_post_thumbnail( $target_post_id );
 				}
@@ -166,11 +146,11 @@ class TK_Post_Syndication_Admin {
 				// Sets the post format
 				set_post_format( $target_post_id , $parent_post_format);
 
-				update_post_meta( $target_post_id, 'parent_post_id', array( $parent_blog_id => $post->ID ) );
+				update_post_meta( $target_post_id, 'tkps_parent_post_id', array( $parent_blog_id => $post->ID ) );
 				restore_current_blog();
 			}
-			update_post_meta( $post_id, 'posts_to_update', $posts_arr );
-			update_post_meta( $post_id, 'sync_with', $_POST['sites_to_sync'] );
+			update_post_meta( $post_id, 'tkps_posts_to_update', $posts_arr );
+			update_post_meta( $post_id, 'tkps_sync_with', $_POST['tkps_sites_to_sync'] );
 		}
 	}
 
@@ -179,9 +159,7 @@ class TK_Post_Syndication_Admin {
 			$post_id = get_the_ID();
 		}
 
-		$master_post = get_post_meta( $post_id, 'parent_post_id', true );
-
-		if ( $master_post ) {
+		if ( $master_post = get_post_meta( $post_id, 'tkps_parent_post_id', true ) ) {
 			return array(
 				'blog_id' => key( $master_post ),
 				'post_id' => current( $master_post ),
@@ -192,8 +170,7 @@ class TK_Post_Syndication_Admin {
 	}
 
 	public function block_synced_post_edit() {
-		$master_post = self::get_master_post( $_GET[ 'post' ] );
-		if ( $master_post ) {
+		if ( $master_post = self::get_master_post( $_GET[ 'post' ] ) ) {
 			$parent_blog_id = $master_post[ 'blog_id' ];
 			$parent_post_id = $master_post[ 'post_id' ];
 
@@ -209,18 +186,22 @@ class TK_Post_Syndication_Admin {
 	}
 
 	public function sync_comments( $comment_ID, $approved, $commentdata ) {
-		$master_post = self::get_master_post( $commentdata[ 'comment_post_ID' ] );
-		if ( $master_post ) {
+		$this->write_log('SYNC_COMMENTS');
+		if ( $master_post = self::get_master_post( $commentdata[ 'comment_post_ID' ] ) ) {
+			$this->write_log('SYNC_COMMENTS - HAS MASTER');
 			$parent_blog_id = $master_post[ 'blog_id' ];
 			$parent_post_id = $master_post[ 'post_id' ];
 
 			if ( $parent_blog_id && $parent_post_id ) {
+				$this->write_log('SYNC_COMMENTS - GOT BLOG AND POST IDS');
 				$commentdata[ 'comment_post_ID' ] = $parent_post_id;
 				$commentdata[ 'comment_parent' ] = $this->comment_parent;
 
 				switch_to_blog( $parent_blog_id );
+				$this->write_log('SYNC_COMMENTS - SWITCH TO ' . $parent_blog_id);
 					wp_insert_comment( $commentdata );
 				restore_current_blog();
+				$this->write_log("SWITCHED BACK");
 			}
 		}
 	}
@@ -245,4 +226,7 @@ class TK_Post_Syndication_Admin {
 		return $count;
 	}
 
+
 }
+
+$tk_post_syndication = new TK_Post_Syndication();
