@@ -33,6 +33,9 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			add_action( 'add_meta_boxes', array( $this, 'add_sync_meta_box' ) );
 			add_action( 'save_post', array( $this,'save_post' ), 10, 2 );
 			add_action( 'load-post.php', array( $this, 'block_synced_post_edit' ) );
+
+			add_action( 'wp_trash_post', array( $this, 'trash_post' ) );
+			add_action( 'before_delete_post', array( $this, 'delete_synced_posts' ) );
 		} else {
 			add_action( 'comment_post', array( $this, 'sync_comments' ), 10, 3 );
 			add_action( 'preprocess_comment', array( $this, 'preprocess_comment' ) );
@@ -186,22 +189,15 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 	}
 
 	public function sync_comments( $comment_ID, $approved, $commentdata ) {
-		$this->write_log('SYNC_COMMENTS');
 		if ( $master_post = self::get_master_post( $commentdata[ 'comment_post_ID' ] ) ) {
-			$this->write_log('SYNC_COMMENTS - HAS MASTER');
 			$parent_blog_id = $master_post[ 'blog_id' ];
 			$parent_post_id = $master_post[ 'post_id' ];
-
 			if ( $parent_blog_id && $parent_post_id ) {
-				$this->write_log('SYNC_COMMENTS - GOT BLOG AND POST IDS');
 				$commentdata[ 'comment_post_ID' ] = $parent_post_id;
 				$commentdata[ 'comment_parent' ] = $this->comment_parent;
-
 				switch_to_blog( $parent_blog_id );
-				$this->write_log('SYNC_COMMENTS - SWITCH TO ' . $parent_blog_id);
 					wp_insert_comment( $commentdata );
 				restore_current_blog();
-				$this->write_log("SWITCHED BACK");
 			}
 		}
 	}
@@ -224,6 +220,34 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			return $count->total_comments;
 		}
 		return $count;
+	}
+
+	public function delete_synced_posts( $post_id ) {
+		$posts_to_update = get_post_meta( $post_id, 'tkps_posts_to_update', true );
+
+		if ( $posts_to_update ) {
+			foreach ( $posts_to_update as $blog => $post ) {
+				switch_to_blog( $blog );
+					remove_action( 'wp_delete_post', array( $this, 'trash_post' ) );
+					$target_post_id = wp_delete_post( $post );
+					add_action( 'wp_delete_post', array( $this, 'trash_post' ) );
+				restore_current_blog();
+			}
+		}
+	}
+
+	public function trash_post( $post_id ) {
+		$posts_to_update = get_post_meta( $post_id, 'tkps_posts_to_update', true );
+
+		if ( $posts_to_update ) {
+			foreach ( $posts_to_update as $blog => $post ) {
+				switch_to_blog( $blog );
+					remove_action( 'wp_trash_post', array( $this, 'trash_post' ) );
+					$target_post_id = wp_trash_post( $post );
+					add_action( 'wp_trash_post', array( $this, 'trash_post' ) );
+				restore_current_blog();
+			}
+		}
 	}
 
 
