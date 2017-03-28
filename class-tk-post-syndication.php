@@ -44,7 +44,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 	}
 
 	public function add_sync_meta_box() {
-		$this->add_meta_box( 'sync-meta-box', esc_html__( 'Should this post be synced between sites on this network?', 'tk-post-syndication' ), 'sync_meta_box_callback', 'post', 'side', 'high', array( 'sites' => get_sites() ) );
+		$this->add_meta_box( 'sync-meta-box', esc_html__( 'Post Syndication', 'tk-post-syndication' ), 'sync_meta_box_callback', 'post', 'side', 'high', array( 'sites' => get_sites() ) );
 	}
 
 	public function sync_meta_box_callback( $post, $metabox ) {
