@@ -55,7 +55,8 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 					$existing_meta = get_post_meta( $post->ID, 'tkps_sync_with', true );
 					?>
 					<label>
-						<input type="checkbox" <?php if ( is_array( $existing_meta ) && in_array( $blog->blog_id, $existing_meta, true ) ) { echo 'checked="checked"'; } ?> name="tkps_sites_to_sync[]" value="<?php echo esc_attr( $blog->blog_id ); ?>" /> <?php echo esc_html( $site_details->blogname; ); ?>
+						<input type="checkbox" <?php if ( is_array( $existing_meta ) && in_array( $blog->blog_id, $existing_meta, true ) ) { echo 'checked="checked"'; } ?> name="tkps_sites_to_sync[]" value="<?php echo esc_attr( $blog->blog_id ); ?>" />
+						<?php echo esc_html( $site_details->blogname ); ?>
 					</label>
 					<br>
 					<?php
