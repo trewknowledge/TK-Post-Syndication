@@ -184,12 +184,11 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			$parent_post_id = $master_post['post_id'];
 
 			if ( $parent_blog_id && $parent_post_id ) {
-				wp_die(
-					sprintf(
-						esc_html__( 'Sorry, you must edit this post from the original site: <a href="%s">edit post</a>', 'tk-post-syndication' ),
-						esc_url( get_admin_url( $parent_blog_id, '/post.php?post=' . $parent_post_id . '&action=edit' ) )
-					)
-				);
+				$edit_url = get_admin_url( $parent_blog_id ) . 'post.php?action=edit&post=' . absint( $parent_post_id );
+				$edit_link = '<a href="' . esc_url( $edit_url ) . '">' . esc_html__( 'edit post', 'tk-post-syndication' ) . '</a>';
+				$message = sprintf( __( 'Sorry, you must edit this post from the original site: %1$s', 'tk-post-syndication' ), $edit_link );
+
+				wp_die( wp_kses_post( $message ) );
 			}
 		}
 	}
