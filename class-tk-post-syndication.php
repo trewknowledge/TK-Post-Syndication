@@ -25,9 +25,16 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 	 */
 	private $comment_parent;
 
+	/**
+	 * Stores the Origin Site gmt offset
+	 * @var float $origin_gmt_offset
+	 */
+	public $origin_gmt_offset;
+
 	public function __construct() {
 		$this->setup( 'tk-post-syndication' );
 		$this->version = '0.1.0';
+		$this->origin_gmt_offset = get_option( 'gmt_offset' );
 
 		if ( is_admin() ) {
 			add_action( 'add_meta_boxes', array( $this, 'add_sync_meta_box' ) );
@@ -100,6 +107,9 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			foreach ( $_POST['tkps_sites_to_sync'] as $site ) {
 				switch_to_blog( $site );
 
+				$gmt_offset = get_option( 'gmt_offset' );
+				$time_diff = $this->origin_gmt_offset - $gmt_offset;
+
 				$categories_arr = array();
 				if ( $parent_category_terms ) {
 					foreach ( $parent_category_terms as $term ) {
@@ -119,13 +129,21 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 					}
 				}
 
-				$postarr = array(
+				$post_date = new DateTime( $post->post_date );
+				if ( $time_diff < 0 ) {
+					$post_date->add( new DateInterval( 'PT' . abs( $time_diff ) . 'H' ) );
+				} else {
+					$post_date->sub( new DateInterval( 'PT' . abs( $time_diff ) . 'H' ) );
+				}
+
+				$orig_post_data = array(
 					'ID' => $posts_to_update[ $site ] ? $posts_to_update[ $site ] : 0,
 					'post_content' => $post->post_content,
 					'post_title' => $post->post_title,
 					'post_status' => $post->post_status,
 					'post_type' => $post->post_type,
 					'post_name' => $post->post_name,
+					'post_date' => $post_date->format( 'Y-m-d H:i:s' ),
 					'comment_status' => $post->comment_status,
 					'ping_status' => $post->ping_status,
 					'tax_input' => array(
@@ -135,7 +153,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 
 				// Fix so wp_insert_post does not run an infinite amount of times
 				remove_action( 'save_post', array( $this, 'save_post' ) );
-				$target_post_id = wp_insert_post( $postarr );
+				$target_post_id = wp_insert_post( $orig_post_data );
 				add_action( 'save_post', array( $this, 'save_post' ) );
 
 				$posts_arr[ $site ] = $target_post_id;
