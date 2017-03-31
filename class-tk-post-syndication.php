@@ -59,7 +59,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			if ( absint( $blog->blog_id ) !== get_current_blog_id() ) {
 				if ( is_user_member_of_blog( $post->post_author, $blog->blog_id ) ) {
 					switch_to_blog( $blog->blog_id );
-						if ( user_can( $post->post_author, 'author' ) || user_can( $post->post_author, 'editor' ) || user_can( $post->post_author, 'administrator' ) ) {
+						if ( user_can( $post->post_author, 'publish_posts' ) && user_can( $post->post_author, 'edit_published_posts' ) ) {
 							$user_can = true;
 						} else {
 							$user_can = false;
