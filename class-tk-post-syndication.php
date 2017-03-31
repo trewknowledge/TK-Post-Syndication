@@ -120,7 +120,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 					continue;
 				}
 
-				if ( ! user_can( $post->post_author, 'publish_posts' ) || ! user_can( $post->post_author, 'edit_published_posts' ) || ! user_can( $post->post_author, 'edit_posts' ) ) {
+				if ( ! user_can( $post->post_author, 'publish_posts' ) || ! user_can( $post->post_author, 'edit_published_posts' ) ) {
 					continue;
 				}
 
