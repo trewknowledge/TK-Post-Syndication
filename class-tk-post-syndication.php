@@ -114,11 +114,15 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			$parent_post_tags = wp_list_pluck( $parent_post_tags, 'name' );
 
 			foreach ( $_POST['tkps_sites_to_sync'] as $site ) {
+				switch_to_blog( $site );
+
 				if ( ! is_user_member_of_blog( $post->post_author, $site ) ) {
 					continue;
 				}
 
-				switch_to_blog( $site );
+				if ( ! user_can( $post->post_author, 'publish_posts' ) || ! user_can( $post->post_author, 'edit_published_posts' ) || ! user_can( $post->post_author, 'edit_posts' ) ) {
+					continue;
+				}
 
 				$gmt_offset = get_option( 'gmt_offset' );
 				$time_diff = $this->origin_gmt_offset - $gmt_offset;
