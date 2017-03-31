@@ -57,16 +57,25 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 	public function sync_meta_box_callback( $post, $metabox ) {
 		foreach ( $metabox['args']['sites'] as $blog ) {
 			if ( absint( $blog->blog_id ) !== get_current_blog_id() ) {
-				if ( is_user_member_of_blog( get_current_user_id(), $blog->blog_id ) && current_user_can_for_blog( $blog->blog_id, 'author' ) || current_user_can_for_blog( $blog->blog_id, 'editor' ) || current_user_can_for_blog( $blog->blog_id, 'administrator' ) ) {
-					$site_details = get_blog_details( $blog->blog_id );
-					$existing_meta = get_post_meta( $post->ID, 'tkps_sync_with', true );
-					?>
-					<label>
-						<input type="checkbox" <?php if ( is_array( $existing_meta ) && in_array( $blog->blog_id, $existing_meta, true ) ) { echo 'checked="checked"'; } ?> name="tkps_sites_to_sync[]" value="<?php echo esc_attr( $blog->blog_id ); ?>" />
-						<?php echo esc_html( $site_details->blogname ); ?>
-					</label>
-					<br>
+				if ( is_user_member_of_blog( $post->post_author, $blog->blog_id ) ) {
+					switch_to_blog( $blog->blog_id );
+						if ( user_can( $post->post_author, 'author' ) || user_can( $post->post_author, 'editor' ) || user_can( $post->post_author, 'administrator' ) ) {
+							$user_can = true;
+						} else {
+							$user_can = false;
+						}
+					restore_current_blog();
+					if ( $user_can ) {
+						$site_details = get_blog_details( $blog->blog_id );
+						$existing_meta = get_post_meta( $post->ID, 'tkps_sync_with', true );
+						?>
+						<label>
+							<input type="checkbox" <?php if ( is_array( $existing_meta ) && in_array( $blog->blog_id, $existing_meta, true ) ) { echo 'checked="checked"'; } ?> name="tkps_sites_to_sync[]" value="<?php echo esc_attr( $blog->blog_id ); ?>" />
+							<?php echo esc_html( $site_details->blogname ); ?>
+						</label>
+						<br>
 					<?php
+					}
 				}
 			}
 		}
@@ -105,6 +114,10 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			$parent_post_tags = wp_list_pluck( $parent_post_tags, 'name' );
 
 			foreach ( $_POST['tkps_sites_to_sync'] as $site ) {
+				if ( ! is_user_member_of_blog( $post->post_author, $site ) ) {
+					continue;
+				}
+
 				switch_to_blog( $site );
 
 				$gmt_offset = get_option( 'gmt_offset' );
@@ -138,6 +151,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 
 				$orig_post_data = array(
 					'ID' => $posts_to_update[ $site ] ? $posts_to_update[ $site ] : 0,
+					'post_author' => $post->post_author,
 					'post_content' => $post->post_content,
 					'post_title' => $post->post_title,
 					'post_status' => $post->post_status,
