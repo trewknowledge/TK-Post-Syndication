@@ -121,6 +121,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 				}
 
 				if ( ! user_can( $post->post_author, 'publish_posts' ) || ! user_can( $post->post_author, 'edit_published_posts' ) ) {
+					restore_current_blog();
 					continue;
 				}
 
