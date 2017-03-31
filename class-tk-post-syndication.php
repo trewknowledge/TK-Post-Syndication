@@ -43,6 +43,8 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 
 			add_action( 'wp_trash_post', array( $this, 'trash_post' ) );
 			add_action( 'before_delete_post', array( $this, 'delete_synced_posts' ) );
+			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+			add_action( 'wp_ajax_update_author', array($this, 'update_author_ajax_callback') );
 		} else {
 			add_action( 'comment_post', array( $this, 'sync_comments' ), 10, 3 );
 			add_action( 'preprocess_comment', array( $this, 'preprocess_comment' ) );
@@ -50,34 +52,83 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		}
 	}
 
+	private function user_can_for_blog( $user_id, $blog_id ) {
+		if ( ! is_user_member_of_blog( $user_id, $blog_id ) ) {
+			return false;
+		}
+
+		switch_to_blog( $blog_id );
+		if ( user_can( $user_id, 'publish_posts' ) && user_can( $user_id, 'edit_published_posts' ) ) {
+			$user_can = true;
+		} else {
+			$user_can = false;
+		}
+		restore_current_blog();
+
+		return $user_can;
+	}
+
+	private function get_user_sites( $user_id ) {
+		$sites = get_sites();
+		$user_sites = array();
+		foreach ($sites as $blog) {
+			if ( absint( $blog->blog_id ) !== get_current_blog_id() ) {
+				if ( $this->user_can_for_blog( $user_id, $blog->blog_id ) ) {
+					$site_details = get_blog_details( $blog->blog_id );
+					$user_sites[ $blog->blog_id ] = $site_details->blogname;
+				}
+			}
+		}
+
+		return $user_sites;
+	}
+
+	public function enqueue_scripts() {
+		wp_enqueue_script( 'tk_post_syndication', plugin_dir_url( __FILE__ ) . 'js/tk-post-syndication.js', array( 'jquery' ), $this->version, true );
+		wp_localize_script( 'tk_post_syndication', 'AJAX', array(
+			'ajax_url' => admin_url('admin-ajax.php'),
+			'nonce' => wp_create_nonce( 'tkps_ajax_nonce' ),
+			'pluginfolder' => plugin_dir_url( __FILE__ ),
+		) );
+	}
+
+	public function update_author_ajax_callback() {
+		$response = array( 'error' => false, 'msg' => esc_html__( 'All good!', 'tk-post-syndication' ) );
+
+		if ( ! wp_verify_nonce( $_POST[ 'security' ], 'tkps_ajax_nonce' ) ) {
+			$response[ 'error' ] = true;
+			$response[ 'msg' ] = esc_html__( 'Failed Security Checkpoint', 'tk-post-syndication' );
+			wp_send_json( $response );
+		}
+
+		$new_author = esc_html( absint( $_POST[ 'new_author' ] ) );
+		$user_sites = $this->get_user_sites( $new_author );
+
+		$response[ 'sites' ] = $user_sites;
+
+		$url = wp_get_referer();
+		$post_id = explode( 'post=', $url );
+		$post_id = explode( '&', $post_id[1] );
+		$response[ 'existing_meta' ] = get_post_meta( $post_id[0], 'tkps_sync_with', true );
+
+		wp_send_json( $response );
+	}
+
 	public function add_sync_meta_box() {
-		$this->add_meta_box( 'sync-meta-box', esc_html__( 'Post Syndication', 'tk-post-syndication' ), 'sync_meta_box_callback', 'post', 'side', 'high', array( 'sites' => get_sites() ) );
+		$this->add_meta_box( 'sync-meta-box', esc_html__( 'Post Syndication', 'tk-post-syndication' ), 'sync_meta_box_callback', 'post', 'side', 'high' );
 	}
 
 	public function sync_meta_box_callback( $post, $metabox ) {
-		foreach ( $metabox['args']['sites'] as $blog ) {
-			if ( absint( $blog->blog_id ) !== get_current_blog_id() ) {
-				if ( is_user_member_of_blog( $post->post_author, $blog->blog_id ) ) {
-					switch_to_blog( $blog->blog_id );
-						if ( user_can( $post->post_author, 'publish_posts' ) && user_can( $post->post_author, 'edit_published_posts' ) ) {
-							$user_can = true;
-						} else {
-							$user_can = false;
-						}
-					restore_current_blog();
-					if ( $user_can ) {
-						$site_details = get_blog_details( $blog->blog_id );
-						$existing_meta = get_post_meta( $post->ID, 'tkps_sync_with', true );
-						?>
-						<label>
-							<input type="checkbox" <?php if ( is_array( $existing_meta ) && in_array( $blog->blog_id, $existing_meta, true ) ) { echo 'checked="checked"'; } ?> name="tkps_sites_to_sync[]" value="<?php echo esc_attr( $blog->blog_id ); ?>" />
-							<?php echo esc_html( $site_details->blogname ); ?>
-						</label>
-						<br>
-					<?php
-					}
-				}
-			}
+		$user_sites = $this->get_user_sites( $post->post_author );
+		foreach ( $user_sites as $blog_id => $blogname ) {
+			$existing_meta = get_post_meta( $post->ID, 'tkps_sync_with', true );
+			?>
+			<label>
+				<input type="checkbox" <?php if ( is_array( $existing_meta ) && in_array( $blog_id, $existing_meta, false ) ) { echo 'checked="checked"'; } ?> name="tkps_sites_to_sync[]" value="<?php echo esc_attr( $blog_id ); ?>" />
+				<?php echo esc_html( $blogname ); ?>
+			</label>
+			<br>
+		<?php
 		}
 	}
 
