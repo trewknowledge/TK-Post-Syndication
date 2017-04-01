@@ -118,7 +118,6 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		$this->add_meta_box( 'sync-meta-box', esc_html__( 'Post Syndication', 'tk-post-syndication' ), 'sync_meta_box_callback', 'post', 'side', 'high' );
 	}
 
-	public function sync_meta_box_callback( $post, $metabox ) {
 		$user_sites = $this->get_user_sites( $post->post_author );
 		foreach ( $user_sites as $blog_id => $blogname ) {
 			$existing_meta = get_post_meta( $post->ID, 'tkps_sync_with', true );
