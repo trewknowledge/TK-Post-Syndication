@@ -52,6 +52,12 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		}
 	}
 
+	/**
+	 * Checks if a user belongs to a blog and if he has publish and edit capabilities
+	 * @param  int $user_id The user ID
+	 * @param  int $blog_id The blog ID
+	 * @return bool         True if user can publish and edit on target blog
+	 */
 	private function user_can_for_blog( $user_id, $blog_id ) {
 		if ( ! is_user_member_of_blog( $user_id, $blog_id ) ) {
 			return false;
@@ -68,6 +74,13 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		return $user_can;
 	}
 
+	/**
+	 * Gets the sites the chosen user is a member of and is capable of publishing and editing.
+	 * Ignores the current site
+	 * See: user_can_for_blog
+	 * @param  int $user_id The chosen user ID
+	 * @return Array        Returns an array where the site ID is the Key and the site name is the value
+	 */
 	private function get_user_sites( $user_id ) {
 		$sites = get_sites();
 		$user_sites = array();
@@ -83,6 +96,10 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		return $user_sites;
 	}
 
+	/**
+	 * Loads and localizes the javascript
+	 * @return void
+	 */
 	public function enqueue_scripts() {
 		wp_enqueue_script( 'tk_post_syndication', plugin_dir_url( __FILE__ ) . 'js/tk-post-syndication.js', array( 'jquery' ), $this->version, true );
 		wp_localize_script( 'tk_post_syndication', 'AJAX', array(
@@ -92,6 +109,10 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		) );
 	}
 
+	/**
+	 * Function used by the ajax call. This sends some info to the JS so it can update the metabox accordingly
+	 * @return json Sends a json response to the ajax call
+	 */
 	public function update_author_ajax_callback() {
 		$response = array( 'error' => false, 'msg' => esc_html__( 'All good!', 'tk-post-syndication' ) );
 
@@ -114,10 +135,19 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		wp_send_json( $response );
 	}
 
+	/**
+	 * Adds our metabox to the post edit page
+	 */
 	public function add_sync_meta_box() {
 		$this->add_meta_box( 'sync-meta-box', esc_html__( 'Post Syndication', 'tk-post-syndication' ), 'sync_meta_box_callback', 'post', 'side', 'high' );
 	}
 
+	/**
+	 * Prints the metabox contents to the post edit page.
+	 * @param  WP_Post $post    The post object
+	 * @return void
+	 */
+	public function sync_meta_box_callback( $post ) {
 		$user_sites = $this->get_user_sites( $post->post_author );
 		foreach ( $user_sites as $blog_id => $blogname ) {
 			$existing_meta = get_post_meta( $post->ID, 'tkps_sync_with', true );
@@ -131,6 +161,12 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		}
 	}
 
+	/**
+	 * The most important method. This is triggered when the post is saved. Not necessarily published.
+	 * @param  int $post_id The post ID
+	 * @param  WP_Post $post    The post Object
+	 * @return void
+	 */
 	public function save_post( $post_id, $post ) {
 		// Autosave, do nothing
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
@@ -250,6 +286,11 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		}
 	}
 
+	/**
+	 * Checks if a post has a parent.
+	 * @param  int $post_id The post ID. Defaults to the current post ID
+	 * @return array        Returns an array containing the parent blog ID and post ID
+	 */
 	public static function get_master_post( $post_id = null ) {
 		if ( ! $post_id ) {
 			$post_id = get_the_ID();
@@ -265,6 +306,11 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		return false;
 	}
 
+	/**
+	 * Runs when a user tries to go into the edit page for a post. If the post has
+	 * a parent, then block him from editing and display a link to the parent edit page.
+	 * @return void
+	 */
 	public function block_synced_post_edit() {
 		if ( $master_post = self::get_master_post( absint( $_GET['post'] ) ) ) {
 			$parent_blog_id = $master_post['blog_id'];
@@ -280,6 +326,13 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		}
 	}
 
+	/**
+	 * Syncs the comment being made in a site with it's parent.
+	 * @param  int $comment_id  The comment ID
+	 * @param  int|string $approved   1 if the comment is approved, 0 if not, 'spam' if spam.
+	 * @param  array $commentdata The comment data
+	 * @return void
+	 */
 	public function sync_comments( $comment_id, $approved, $commentdata ) {
 		if ( $master_post = self::get_master_post( $commentdata['comment_post_ID'] ) ) {
 			$parent_blog_id = $master_post['blog_id'];
@@ -294,11 +347,22 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		}
 	}
 
+	/**
+	 * Grabs the comment parent and store it
+	 * @param  array $commentdata The comment data
+	 * @return array              The modified $commentdata array
+	 */
 	public function preprocess_comment( $commentdata ) {
 		$this->comment_parent = absint( $commentdata['comment_parent'] );
 		return $commentdata;
 	}
 
+	/**
+	 * Get the parent comment count so children display the right amount
+	 * @param  int $count The comment count
+	 * @param  int $post_id The post ID
+	 * @return int          The total comment count
+	 */
 	public function get_comments_number( $count, $post_id ) {
 		if ( $master_post = self::get_master_post( $post_id ) ) {
 			$parent_blog_id = $master_post['blog_id'];
@@ -314,6 +378,11 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		return $count;
 	}
 
+	/**
+	 * Delete the child posts when the master is deleted
+	 * @param  int $post_id The post ID
+	 * @return void
+	 */
 	public function delete_synced_posts( $post_id ) {
 		$posts_to_update = get_post_meta( $post_id, 'tkps_posts_to_update', true );
 
@@ -328,6 +397,11 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		}
 	}
 
+	/**
+	 * Trashes the child posts when the master is sent to trash
+	 * @param  int $post_id The post ID
+	 * @return void
+	 */
 	public function trash_post( $post_id ) {
 		$posts_to_update = get_post_meta( $post_id, 'tkps_posts_to_update', true );
 
