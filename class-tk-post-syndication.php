@@ -162,6 +162,38 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 	}
 
 	/**
+	 * Find the ID of a media item, given it's URL.
+	 *
+	 * @param string $image_url URL to the media item.
+	 *
+	 * @return int Media item's ID
+	 */
+	protected function get_image_id( $image_url ) {
+		global $wpdb;
+		// Try to retrieve the attachment ID from the cache.
+		$cache_key = 'image_id_' . md5( $image_url );
+		$attachment = wp_cache_get( $cache_key, 'aggregator' );
+		if ( false === $attachment ) {
+			// Query the DB to get the attachment ID.
+			// @codingStandardsIgnoreStart
+			$attachment = $wpdb->get_col(
+				$wpdb->prepare(
+					'SELECT ID FROM ' . $wpdb->prefix . 'posts' . " WHERE guid='%s';",
+					$image_url
+				)
+			);
+			// @codingStandardsIgnoreEnd
+			// Store attachment ID in the cache.
+			wp_cache_set( $cache_key, $attachment, 'aggregator' );
+		}
+		// ID should be the first element of the returned array.
+		if ( is_array( $attachment ) && isset( $attachment[0] ) ) {
+			return $attachment[0];
+		}
+		return false;
+	}
+
+	/**
 	 * The most important method. This is triggered when the post is saved. Not necessarily published.
 	 * @param  int $post_id The post ID
 	 * @param  WP_Post $post    The post Object
@@ -265,6 +297,17 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 
 				if ( isset( $feat_image ) && $feat_image ) {
 					update_post_meta( $target_post_id, 'tkps_parent_featured_image_url', $feat_image );
+					$target_feat_image = media_sideload_image($feat_image, $target_post_id);
+					if ( is_wp_error( $target_feat_image ) ) {
+						error_log( "Failed to add featured image to post $target_post_id" );
+						return;
+					}
+					$array = array();
+					preg_match( "/src='([^']*)'/i", $target_feat_image, $array );
+
+					$target_feat_image = $this->get_image_id( $array[1] );
+					$target_feat_image_data = wp_generate_attachment_metadata( $target_feat_image, get_attached_file( $target_feat_image ) );
+					update_post_meta( $target_post_id, '_thumbnail_id', $target_feat_image );
 				} else {
 					delete_post_thumbnail( $target_post_id );
 				}
