@@ -296,7 +296,6 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 				$posts_arr[ $site ] = $target_post_id;
 
 				if ( isset( $feat_image ) && $feat_image ) {
-					update_post_meta( $target_post_id, 'tkps_parent_featured_image_url', $feat_image );
 					$target_feat_image = media_sideload_image($feat_image, $target_post_id);
 					if ( is_wp_error( $target_feat_image ) ) {
 						error_log( "Failed to add featured image to post $target_post_id" );
