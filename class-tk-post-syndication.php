@@ -172,7 +172,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		global $wpdb;
 		// Try to retrieve the attachment ID from the cache.
 		$cache_key = 'image_id_' . md5( $image_url );
-		$attachment = wp_cache_get( $cache_key, 'aggregator' );
+		$attachment = wp_cache_get( $cache_key, 'tkps' );
 		if ( false === $attachment ) {
 			// Query the DB to get the attachment ID.
 			// @codingStandardsIgnoreStart
@@ -184,7 +184,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			);
 			// @codingStandardsIgnoreEnd
 			// Store attachment ID in the cache.
-			wp_cache_set( $cache_key, $attachment, 'aggregator' );
+			wp_cache_set( $cache_key, $attachment, 'tkps' );
 		}
 		// ID should be the first element of the returned array.
 		if ( is_array( $attachment ) && isset( $attachment[0] ) ) {
