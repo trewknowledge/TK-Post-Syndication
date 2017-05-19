@@ -44,7 +44,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			add_action( 'wp_trash_post', array( $this, 'trash_post' ) );
 			add_action( 'before_delete_post', array( $this, 'delete_synced_posts' ) );
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-			add_action( 'wp_ajax_update_author', array($this, 'update_author_ajax_callback') );
+			add_action( 'wp_ajax_update_author', array( $this, 'update_author_ajax_callback' ) );
 		} else {
 			add_action( 'comment_post', array( $this, 'sync_comments' ), 10, 3 );
 			add_action( 'preprocess_comment', array( $this, 'preprocess_comment' ) );
@@ -84,7 +84,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 	private function get_user_sites( $user_id ) {
 		$sites = get_sites();
 		$user_sites = array();
-		foreach ($sites as $blog) {
+		foreach ( $sites as $blog ) {
 			if ( absint( $blog->blog_id ) !== get_current_blog_id() ) {
 				if ( $this->user_can_for_blog( $user_id, $blog->blog_id ) ) {
 					$site_details = get_blog_details( $blog->blog_id );
@@ -103,7 +103,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 	public function enqueue_scripts() {
 		wp_enqueue_script( 'tk_post_syndication', plugin_dir_url( __FILE__ ) . 'js/tk-post-syndication.js', array( 'jquery' ), $this->version, true );
 		wp_localize_script( 'tk_post_syndication', 'AJAX', array(
-			'ajax_url' => admin_url('admin-ajax.php'),
+			'ajax_url' => admin_url( 'admin-ajax.php' ),
 			'nonce' => wp_create_nonce( 'tkps_ajax_nonce' ),
 			'pluginfolder' => plugin_dir_url( __FILE__ ),
 		) );
@@ -114,23 +114,26 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 	 * @return json Sends a json response to the ajax call
 	 */
 	public function update_author_ajax_callback() {
-		$response = array( 'error' => false, 'msg' => esc_html__( 'All good!', 'tk-post-syndication' ) );
+		$response = array(
+			'error' => false,
+			'msg' => esc_html__( 'All good!', 'tk-post-syndication' ),
+		);
 
-		if ( ! wp_verify_nonce( $_POST[ 'security' ], 'tkps_ajax_nonce' ) ) {
-			$response[ 'error' ] = true;
-			$response[ 'msg' ] = esc_html__( 'Failed Security Checkpoint', 'tk-post-syndication' );
+		if ( ! wp_verify_nonce( $_POST['security'], 'tkps_ajax_nonce' ) ) {
+			$response['error'] = true;
+			$response['msg'] = esc_html__( 'Failed Security Checkpoint', 'tk-post-syndication' );
 			wp_send_json( $response );
 		}
 
-		$new_author = esc_html( absint( $_POST[ 'new_author' ] ) );
+		$new_author = esc_html( absint( $_POST['new_author'] ) );
 		$user_sites = $this->get_user_sites( $new_author );
 
-		$response[ 'sites' ] = $user_sites;
+		$response['sites'] = $user_sites;
 
 		$url = wp_get_referer();
 		$post_id = explode( 'post=', $url );
 		$post_id = explode( '&', $post_id[1] );
-		$response[ 'existing_meta' ] = get_post_meta( $post_id[0], 'tkps_sync_with', true );
+		$response['existing_meta'] = get_post_meta( $post_id[0], 'tkps_sync_with', true );
 
 		wp_send_json( $response );
 	}
@@ -296,7 +299,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 				$posts_arr[ $site ] = $target_post_id;
 
 				if ( isset( $feat_image ) && $feat_image ) {
-					$target_feat_image = media_sideload_image($feat_image, $target_post_id);
+					$target_feat_image = media_sideload_image( $feat_image, $target_post_id );
 					if ( is_wp_error( $target_feat_image ) ) {
 						error_log( "Failed to add featured image to post $target_post_id" );
 						return;
@@ -320,12 +323,14 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 				// Sets the post format
 				set_post_format( $target_post_id , $parent_post_format );
 
-				update_post_meta( $target_post_id, 'tkps_parent_post_id', array( $parent_blog_id => $post->ID ) );
+				update_post_meta( $target_post_id, 'tkps_parent_post_id', array(
+					$parent_blog_id => $post->ID,
+				) );
 				restore_current_blog();
-			}
+			}// End foreach().
 			update_post_meta( $post_id, 'tkps_posts_to_update', $posts_arr );
 			update_post_meta( $post_id, 'tkps_sync_with', $_POST['tkps_sites_to_sync'] );
-		}
+		}// End if().
 	}
 
 	/**
