@@ -247,6 +247,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 					'ID' => $posts_to_update[ $site ] ? $posts_to_update[ $site ] : 0,
 					'post_author' => $post->post_author,
 					'post_content' => $post->post_content,
+					'post_excerpt' => $post->post_excerpt,
 					'post_title' => $post->post_title,
 					'post_status' => $post->post_status,
 					'post_type' => $post->post_type,
