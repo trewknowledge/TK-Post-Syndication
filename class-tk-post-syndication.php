@@ -188,8 +188,29 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			return;
 		}
 
+		$user_sites = array_keys( $this->get_user_sites( $post->post_author ) );
+		$posts_to_update = get_post_meta( $post_id, 'tkps_posts_to_update', true );
+
+		/**
+		 * Delete from child site if site gets unchecked from original post.
+		 */
+		if ( $posts_to_update ) {
+			if ( isset( $_POST['tkps_sites_to_sync'] ) ) {
+				$sites_not_to_sync = array_diff( array_keys( $posts_to_update ), $_POST['tkps_sites_to_sync'] );
+				foreach ( $sites_not_to_sync as $blog ) {
+					$synced_post_id = $posts_to_update[ $blog ];
+					$this->delete_synced_post( $blog, $synced_post_id );
+				}
+			} else {
+				foreach ( $posts_to_update as $blog => $synced_post_id ) {
+					$this->delete_synced_post( $blog, $synced_post_id );
+				}
+				update_post_meta( $post_id, 'tkps_posts_to_update', array() );
+				update_post_meta( $post_id, 'tkps_sync_with', array() );
+			}
+		}
+
 		if ( isset( $_POST['tkps_sites_to_sync'] ) && $_POST['tkps_sites_to_sync'] ) {
-			$posts_to_update = get_post_meta( $post_id, 'tkps_posts_to_update', true );
 			$posts_arr = array();
 			$parent_blog_id = get_current_blog_id();
 
@@ -270,7 +291,6 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 				if ( isset( $feat_image ) && $feat_image ) {
 					$target_feat_image = media_sideload_image( $feat_image, $target_post_id );
 					if ( is_wp_error( $target_feat_image ) ) {
-						error_log( "Failed to add featured image to post $target_post_id" );
 						return;
 					}
 					$array = array();
@@ -411,6 +431,14 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 				restore_current_blog();
 			}
 		}
+	}
+
+	public function delete_synced_post( $blog, $post_id ) {
+		switch_to_blog( $blog );
+			remove_action( 'wp_delete_post', array( $this, 'trash_post' ) );
+			$target_post_id = wp_delete_post( $post_id, true );
+			add_action( 'wp_delete_post', array( $this, 'trash_post' ) );
+		restore_current_blog();
 	}
 
 	/**
