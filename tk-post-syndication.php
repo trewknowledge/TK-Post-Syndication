@@ -22,5 +22,18 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+register_activation_hook( __FILE__, function( $network_wide ) {
+	if ( is_multisite() && $network_wide ) {
+		$sites = get_sites();
+		foreach ( $sites as $site ) {
+			switch_to_blog( $site->blog_id );
+				add_option( 'tkps_post_types', array('post', 'page') );
+			restore_current_blog();
+		}
+	} else {
+		die( esc_html__( 'This plugin is meant to be used as a network wide activation. Go to your network dashboard and click on "Network Enable".', 'tk-post-syndicate' ) );
+	}
+} );
+
 require_once( 'class-helpers.php' );
 require_once( 'class-tk-post-syndication.php' );

@@ -37,14 +37,19 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		$this->origin_gmt_offset = get_option( 'gmt_offset' );
 
 		if ( is_admin() ) {
-			add_action( 'add_meta_boxes', array( $this, 'add_sync_meta_box' ) );
-			add_action( 'save_post', array( $this, 'save_post' ), 10, 2 );
+			$selected_pt = (array) get_option( 'tkps_post_types', array() );
+			foreach ( $selected_pt as $post_type ) {
+				add_action( 'add_meta_boxes', array( $this, 'add_sync_meta_box' ) );
+				add_action( "save_{$post_type}", array( $this, 'save_post' ), 10, 2 );
+			}
 			add_action( 'load-post.php', array( $this, 'block_synced_post_edit' ) );
 
 			add_action( 'wp_trash_post', array( $this, 'trash_post' ) );
 			add_action( 'before_delete_post', array( $this, 'delete_synced_posts' ) );
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 			add_action( 'wp_ajax_update_author', array( $this, 'update_author_ajax_callback' ) );
+
+			add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
 		} else {
 			add_action( 'comment_post', array( $this, 'sync_comments' ), 10, 3 );
 			add_action( 'preprocess_comment', array( $this, 'preprocess_comment' ) );
@@ -141,8 +146,8 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 	/**
 	 * Adds our metabox to the post edit page
 	 */
-	public function add_sync_meta_box() {
-		$this->add_meta_box( 'sync-meta-box', esc_html__( 'Post Syndication', 'tk-post-syndication' ), 'sync_meta_box_callback', 'post', 'side', 'high' );
+	public function add_sync_meta_box( $post_type ) {
+		$this->add_meta_box( 'sync-meta-box', esc_html__( 'Post Syndication', 'tk-post-syndication' ), 'sync_meta_box_callback', $post_type, 'side', 'high' );
 	}
 
 	/**
@@ -433,6 +438,12 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 		}
 	}
 
+	/**
+	 * Delete one specific synced post.
+	 * @param  [type] $blog    [description]
+	 * @param  [type] $post_id [description]
+	 * @return [type]          [description]
+	 */
 	public function delete_synced_post( $blog, $post_id ) {
 		switch_to_blog( $blog );
 			remove_action( 'wp_delete_post', array( $this, 'trash_post' ) );
@@ -458,6 +469,26 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 				restore_current_blog();
 			}
 		}
+	}
+
+	/**
+	 * Registers a settings page.
+	 */
+	public function add_settings_page() {
+		$title = esc_html__( 'Post Syndication', 'tk-post-syndication' );
+		$capability = 'manage_options';
+		$menu_slug = 'tk-post-syndication';
+		add_menu_page( $title, $title, $capability, $menu_slug, array( $this, 'settings_page_html' ), 'dashicons-networking' );
+	}
+
+	public function settings_page_html() {
+		$selected_pt = (array) get_option( 'tkps_post_types', array() );
+		$post_types = get_post_types( array( 'public' => true ), 'objects' );
+		require_once plugin_dir_path( __FILE__ ) . 'views/settings-page.php';
+	}
+
+	public function register_settings() {
+		register_setting( 'tk-post-syndication', 'tkps_post_types' );
 	}
 
 
