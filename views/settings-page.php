@@ -15,7 +15,7 @@
 						<?php foreach ( $post_types as $k => $v ): ?>
 							<li>
 								<label>
-									<input type="checkbox" name="tkps_post_types" value="<?php echo esc_attr( $k ); ?>" <?php checked( in_array( $k, $selected_pt ), true ) ?>><?php echo esc_html( $v->label ) ?>
+									<input type="checkbox" name="tkps_post_types[]" value="<?php echo esc_attr( $k ); ?>" <?php checked( in_array( $k, $selected_pt ), true ) ?>><?php echo esc_html( $v->label ) ?>
 								</label>
 							</li>
 						<?php endforeach ?>

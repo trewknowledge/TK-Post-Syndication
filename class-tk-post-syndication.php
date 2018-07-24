@@ -44,6 +44,8 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			}
 			add_action( 'load-post.php', array( $this, 'block_synced_post_edit' ) );
 
+			add_action( 'admin_init', array( $this, 'register_settings' ) );
+
 			add_action( 'wp_trash_post', array( $this, 'trash_post' ) );
 			add_action( 'before_delete_post', array( $this, 'delete_synced_posts' ) );
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
