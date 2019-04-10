@@ -226,9 +226,13 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			}
 
 			$parent_post_format = get_post_format( $post_id );
-			$parent_category_terms = get_the_terms( $post_id, 'category' );
 			$parent_post_tags = get_the_terms( $post_id, 'post_tag' );
 			$parent_post_tags = wp_list_pluck( $parent_post_tags, 'name' );
+
+			$parent_taxonomies = get_post_taxonomies( $post_id );
+			foreach ( $parent_taxonomies as $tax ) {
+				${'parent_' . $tax . '_terms'} = get_the_terms( $post_id, $tax );
+			}
 
 			foreach ( $_POST['tkps_sites_to_sync'] as $site ) {
 				switch_to_blog( $site );
@@ -245,22 +249,20 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 				$gmt_offset = get_option( 'gmt_offset' );
 				$time_diff = $this->origin_gmt_offset - $gmt_offset;
 
-				$categories_arr = array();
-				if ( $parent_category_terms ) {
-					foreach ( $parent_category_terms as $term ) {
-
-						// Adds or Updates the category on the child site
-						wp_insert_term(
-							$term->name,
-							'category',
-							array(
-							'description' => $term->description,
-							'slug'    => $term->slug,
-							)
-						);
-
-						$categories_arr[] = $term->name;
-
+				$terms_arr = array();
+				foreach ( $parent_taxonomies as $tax ) {
+					if ( ! empty( ${'parent_' . $tax . '_terms'} ) ) {
+						foreach ( ${'parent_' . $tax . '_terms'} as $term ) {
+							wp_insert_term(
+								$term->name,
+								$tax,
+								array(
+									'description' => $term->description,
+									'slug'    => $term->slug,
+								)
+							);
+							$terms_arr[ $tax ][] = $term->name;
+						}
 					}
 				}
 
@@ -310,12 +312,11 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 					delete_post_thumbnail( $target_post_id );
 				}
 
-				// Clear all categories
-				wp_set_object_terms( $target_post_id, null, 'category' );
-				foreach ( $categories_arr as $cat ) {
-					// Set the categories
-					wp_set_object_terms( $target_post_id, $cat, 'category', true );
+				foreach ( $terms_arr as $tax => $term ) {
+					wp_set_object_terms( $target_post_id, null, $tax ); // Clear all taxonomy terms
+					wp_set_object_terms( $target_post_id, $term, $tax, true ); // Set the terms
 				}
+
 				// Sets the post format
 				set_post_format( $target_post_id , $parent_post_format );
 
