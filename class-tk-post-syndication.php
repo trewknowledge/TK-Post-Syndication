@@ -158,7 +158,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 	 * @return void
 	 */
 	public function sync_meta_box_callback( $post ) {
-		$user_sites = $this->get_user_sites( $post->post_author );
+		$user_sites = $this->get_user_sites( get_current_user_id() );
 		foreach ( $user_sites as $blog_id => $blogname ) {
 			$existing_meta = get_post_meta( $post->ID, 'tkps_sync_with', true );
 			?>
@@ -195,7 +195,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			return;
 		}
 
-		$user_sites = array_keys( $this->get_user_sites( $post->post_author ) );
+		$user_sites = array_keys( $this->get_user_sites( get_current_user_id() ) );
 		$posts_to_update = get_post_meta( $post_id, 'tkps_posts_to_update', true );
 
 		/**
@@ -233,11 +233,11 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			foreach ( $_POST['tkps_sites_to_sync'] as $site ) {
 				switch_to_blog( $site );
 
-				if ( ! is_user_member_of_blog( $post->post_author, $site ) ) {
+				if ( ! is_user_member_of_blog( get_current_user_id(), $site ) ) {
 					continue;
 				}
 
-				if ( ! user_can( $post->post_author, 'publish_posts' ) || ! user_can( $post->post_author, 'edit_published_posts' ) ) {
+				if ( ! user_can( get_current_user_id(), 'publish_posts' ) || ! user_can( get_current_user_id(), 'edit_published_posts' ) ) {
 					restore_current_blog();
 					continue;
 				}
@@ -273,7 +273,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 
 				$orig_post_data = array(
 					'ID' => $posts_to_update[ $site ] ? $posts_to_update[ $site ] : 0,
-					'post_author' => $post->post_author,
+					'post_author' => get_current_user_id(),
 					'post_content' => $post->post_content,
 					'post_excerpt' => $post->post_excerpt,
 					'post_title' => $post->post_title,
