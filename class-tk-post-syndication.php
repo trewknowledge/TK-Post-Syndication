@@ -228,7 +228,11 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 			$parent_post_format 	= get_post_format( $post_id );
 			$parent_post_tags 		= get_the_terms( $post_id, 'post_tag' );
 			$parent_post_tags 		= wp_list_pluck( $parent_post_tags, 'name' );
-			$parent_post_metadata = get_fields( $post_id );
+
+			$parent_post_metadata = array();
+			if ( function_exists( 'get_fields' ) ) {
+				$parent_post_metadata = get_fields( $post_id );
+			}
 
 			$parent_taxonomies = get_post_taxonomies( $post_id );
 			foreach ( $parent_taxonomies as $tax ) {
