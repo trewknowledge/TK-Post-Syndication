@@ -225,9 +225,10 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 				$feat_image = get_the_post_thumbnail_url( $post_id, 'full' );
 			}
 
-			$parent_post_format = get_post_format( $post_id );
-			$parent_post_tags = get_the_terms( $post_id, 'post_tag' );
-			$parent_post_tags = wp_list_pluck( $parent_post_tags, 'name' );
+			$parent_post_format 	= get_post_format( $post_id );
+			$parent_post_tags 		= get_the_terms( $post_id, 'post_tag' );
+			$parent_post_tags 		= wp_list_pluck( $parent_post_tags, 'name' );
+			$parent_post_metadata = get_fields( $post_id );
 
 			$parent_taxonomies = get_post_taxonomies( $post_id );
 			foreach ( $parent_taxonomies as $tax ) {
@@ -315,6 +316,13 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 				foreach ( $terms_arr as $tax => $term ) {
 					wp_set_object_terms( $target_post_id, null, $tax ); // Clear all taxonomy terms
 					wp_set_object_terms( $target_post_id, $term, $tax, true ); // Set the terms
+				}
+
+				// Update post meta data
+				if ( ! empty ( $parent_post_metadata ) ) {
+					foreach ( $parent_post_metadata as $meta_key => $meta_value ) {
+						update_field( $meta_key, $meta_value, $target_post_id );
+					}
 				}
 
 				// Sets the post format
