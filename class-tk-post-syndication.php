@@ -336,7 +336,7 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 					$parent_blog_id => $post->ID,
 				) );
 
-				add_action( 'wp_insert_post', array( $this, 'save_post_meta' ), 10, 3 );
+				add_action( 'wp_insert_post', array( $this, 'sync_post_meta' ), 10, 3 );
 				restore_current_blog();
 			}// End foreach().
 			update_post_meta( $post_id, 'tkps_posts_to_update', $posts_arr );
@@ -345,12 +345,12 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 	}
 
 	/**
-	* Save all ACF fields
+	* Sync all ACF fields
 	* @param int $post_id The post ID
   * @param object $post
 	* @param boolen $update
 	*/
-	public function save_post_meta( $post_id, $post, $update ) {
+	public function sync_post_meta( $post_id, $post, $update ) {
 		$syndicate_posts = get_post_meta( $post_id, 'tkps_posts_to_update' );
 		$sites_to_sync	 = get_post_meta( $post_id, 'tkps_sync_with' );
 
