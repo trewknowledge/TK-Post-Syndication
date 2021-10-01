@@ -335,11 +335,44 @@ class TK_Post_Syndication extends TK_Post_Syndication_Helper {
 				update_post_meta( $target_post_id, 'tkps_parent_post_id', array(
 					$parent_blog_id => $post->ID,
 				) );
+
+				add_action( 'wp_insert_post', array( $this, 'save_post_meta' ), 10, 3 );
 				restore_current_blog();
 			}// End foreach().
 			update_post_meta( $post_id, 'tkps_posts_to_update', $posts_arr );
 			update_post_meta( $post_id, 'tkps_sync_with', $_POST['tkps_sites_to_sync'] );
 		}// End if().
+	}
+
+	/**
+	* Save all ACF fields
+	* @param int $post_id The post ID
+  * @param object $post
+	* @param boolen $update
+	*/
+	public function save_post_meta( $post_id, $post, $update ) {
+		$syndicate_posts = get_post_meta( $post_id, 'tkps_posts_to_update' );
+		$sites_to_sync	 = get_post_meta( $post_id, 'tkps_sync_with' );
+
+		if ( ! empty ( $sites_to_sync ) ) {
+			$original_post_metas = get_fields( $post_id );
+
+			foreach ( $sites_to_sync[0] as $site ) {
+				switch_to_blog( $site );
+
+				foreach( $syndicate_posts as $sync_post ) {
+					$target_post_id = absint( $sync_post[$site] );
+					// Update post meta
+					if ( ! empty ( $original_post_metas ) ) {
+						foreach( $original_post_metas as $meta_name => $meta_value ) {
+							error_log( sprintf( 'Meta Data : %s - %s', $meta_name, $meta_value ) );
+							update_field( $meta_name, $meta_value, $target_post_id );
+						}
+					}
+				}
+				restore_current_blog();
+			}
+		}
 	}
 
 	/**
